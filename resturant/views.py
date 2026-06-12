@@ -1,12 +1,12 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Category,Item,Order, OrderItem
-from django.db.models import Q
-from .forms import AddToCartForm, UpdateCartForm
+from django.db.models import Q, Count
+from .forms import AddToCartForm, UpdateCartForm, ItemForm, CategoryForm
 from cart import *
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-
-
+from authorization import OrderPolicy, ItemPolicy, Policy, admin_required
+from django.core.exceptions import PermissionDenied
 
 # Create your views here.
 def home(request):
@@ -108,6 +108,134 @@ def order_history(request):
 @login_required
 def order_detail(request, pk):
     order = get_object_or_404(Order, pk=pk)
+    policy =OrderPolicy(request.user,order)
+    if not policy.show():
+        raise PermissionDenied('You are not allowed to view this order')
+    order_items = order.order_items.select_related('item')
+    return render(request, 'resturant/order_detail.html',{'order':order, 'order_items':order_items})
+
+@admin_required
+def admin_item_create(request):
+    if request.method == 'POST':
+        form = ItemForm(request.POST)
+        if form.is_valid():
+            item = form.save()
+            messages.success(request,"Action successfull")
+            return redirect('item_detail', pk =item.pk)
+    else:
+        form = ItemForm()
+        return render(request, 'resturant/admin/item_form.html', {"form" :form , "action" :"Create"})
+        
+@admin_required
+def admin_item_edit(request, pk):
+    item = get_object_or_404(Item, pk=pk)
+    if request.method == 'POST':
+        form = ItemForm(request.POST, instance = item)
+        if form.is_valid():
+            item = form.save()
+            messages.success(request, 'Item updated successfully')
+            return redirect("item_detail", pk = item.pk)
+    form = ItemForm(instance = item)
+    return render(request, 'resturant/admin/item_form.html',{"item": item, "form" :form, "action":"Edit"})
+
+@admin_required
+def admin_item_retire(request, pk):
+    item = get_object_or_404(Item, pk=pk)
+    if request.method == 'POST':
+        item.is_retired = not item.is_retired
+        item.save()
+    return redirect('item_list')
+
+@admin_required
+def admin_category_list(request):
+    categories = Category.objects.annotate(item_count = Count('items'))
+    return render(request, 'resturant/admin/category_list.html', {"categories":categories})
+
+@admin_required
+def admin_category_create(request):
+    if request.method == 'POST':
+        form = CategoryForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('admin_category_list')
+    else:
+        form = CategoryForm()
+    return render(request,'resturant/admin/category_form.html', {"form" :form, "action" :"Create"})
+
+@admin_required
+def admin_category_edit(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    if request.method == 'POST':
+        form = CategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+            return redirect('admin_category_list')
+    else:
+        form = CategoryForm(instance = category)
+    return render(request,'resturant/admin/category_form.html', {"form" :form, "action" :"Edit", "category": category})
+
+@admin_required
+def admin_dashboard(request):
+    status_filter = request.GET.get('status', '')
+    orders = Order.objects.select_related('user').prefetch_related('order_items')
+
+    status_counts ={
+        "ordered" :orders.filter(status ='ordered').count(),
+        "paid": orders.filter(status ='paid').count(),
+        "cancelled": orders.filter(status ='cancelled').count(),
+        "completed": orders.filter(status ='completed').count()
+    }  
+
+    total_orders = sum(status_counts.values())
+    if status_filter in ('paid','ordered','cancelled','completed'):
+        orders = orders.filter(status = status_filter)
+    return render(request,'resturant/admin/dashboard.html', {
+        "orders":orders,
+        "status_counts": status_counts,
+        "total_orders" :total_orders,
+        'status_filter' :status_filter,
+        "status_choices" :Order.STATUS_CHOICES
+    })
+
+@admin_required
+def admin_order_detail(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    order_items =order.order_items.select_related('item')
+    return render(request, 'resturant/admin/order_detail.html',{'order':order, 'order_items':order_items})
+
+@admin_required
+def admin_order_transition(request, pk, action):
+    order = get_object_or_404(Order, pk=pk)
+
+    transitions = {
+        "pay" :{
+            "from" :["ordered"],
+            "to" : "paid",
+        },
+        "complete" :{
+            "from" : ["paid"],
+            "to" : "completed"
+        },
+        "cancel" : {
+            "from" :["ordered", "paid"],
+            "to" :"cancelled"
+        }
+    }
+    transition = transitions.get(action)
+    if not transition:
+        messages.error(request, "invalid action")
+    if order.status not in transition['from']:
+        messages.error(request, "invalid action")
+    if request.method == 'POST':
+        order.status = transition['to']
+        order.save()
+        messages.success(request, 'action successfull')
+    return redirect('admin_dashboard')
+
+
+
+
+
         
 
 
