@@ -1,0 +1,22 @@
+{% block content %} 
+<div class="login-container" style="max-width: 400px; margin: 50px auto; font-family: sans-serif;">
+    <h2>Log In</h2>
+    
+    <!-- Added the actual form tag -->
+    <form method="POST" action="">
+        {% csrf_token %}
+        
+        <!-- This safely renders errors, labels, and text input boxes automatically -->
+        {{ form.as_p }}
+        
+        <!-- Added a functional submit button -->
+        <button type="submit" style="margin-top: 10px; padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Log In
+        </button>
+    </form>
+
+    <p style="margin-top: 15px;">
+        Don't have an account? <a href="{% url 'register' %}">Sign Up</a>
+    </p>
+</div>
+{% endblock %}

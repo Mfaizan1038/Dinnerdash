@@ -1,0 +1,13 @@
+<!-- {% extends "restaurant/base.html" %} {% block title %}Profile  Dinner Dash{% endblock %} {% block content %} -->
+My Profile
+{{ user.email }}
+
+{% csrf_token %} {% for field in form %}
+{{ field.label }} 
+{{ field.value|default:'' }}
+ {% if field.errors %}
+{{ field.errors|join:', ' }}
+{% endif %}
+{% endfor %} Save Changes
+View My Orders
+{% endblock %}

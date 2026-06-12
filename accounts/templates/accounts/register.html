@@ -1,0 +1,16 @@
+<!-- {% extends "restaurant/base.html" %} {% block title %}Sign Up  Dinner Dash{% endblock %} {% block content %} -->
+Create Account
+{% csrf_token %} {% for field in form %}
+{{ field.label }}{% if field.field.required %} *{% endif %} {% if field.widget_type == 'password' or field.name in 'password1,password2' %} 
+••••••••
+ {% else %} 
+{{ field.value|default:'' }}
+ {% endif %} {% if field.errors %}
+{{ field.errors|join:', ' }}
+{% endif %} {% if field.help_text %}
+{{ field.help_text }}
+{% endif %}
+{% endfor %} Create Account
+Already have an account? Log In
+
+{% endblock %}
