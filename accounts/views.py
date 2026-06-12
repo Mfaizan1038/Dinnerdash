@@ -43,10 +43,6 @@ def logout_view(request):
     messages.info(request, "Logout succesfull")
     return redirect('home')
 
-def home_view(request):
-    user_method = request.method 
-    return HttpResponse(f"Hello! You visited via a {user_method} request.")
-
 @login_required
 def profile_view(request):
     if request.method == 'POST':

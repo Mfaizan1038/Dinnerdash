@@ -8,3 +8,17 @@ class AddToCartForm(forms.Form):
 class UpdateCartForm(forms.Form):
     quantity = forms.IntegerField(min_value=0)
     item_id = forms.IntegerField(widget=forms.HiddenInput)
+
+class ItemForm(forms.ModelForm):
+    categories = forms.ModelMultipleChoiceField(
+        queryset= Category.objects.all(),
+        required = True
+    )
+    class Meta:
+        model = Item
+        fields = ['title', 'description', 'price', 'categories']
+
+class CategoryForm(forms.ModelForm):
+    
+    class Meta:
+        fields = ('name',)
